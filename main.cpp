@@ -1,10 +1,13 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 
 using namespace std;
 
 int main() {
+    system("cls"); // Clear the console screen (Windows specific)
+
     cout << "Welcome To Employee Management System!" << endl;
     string command;
 

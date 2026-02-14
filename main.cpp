@@ -38,6 +38,9 @@ int main() {
         sqlite3_free(errMsg);
     }
     
+    
+
+
     cout << "Welcome To Employee Management System!" << endl;
     string command;
 
@@ -49,12 +52,12 @@ int main() {
     string help_command[] = {"HELP", "COMMANDS", "SHOW COMMANDS", "LIST COMMANDS", "DISPLAY COMMANDS", "VIEW COMMANDS"};
     
 
-    while (true) {
+    while (true) { // Main command loop
         cout << "=> ";
-        getline(cin, command); //get user input as line
-        transform(command.begin(), command.end(), command.begin(), ::toupper); // Convert command to uppercase for case-insensitive comparison 
-        if (find(add_command, add_command + sizeof(add_command)/sizeof(add_command[0]), command) != add_command + sizeof(add_command)/sizeof(add_command[0])) { //checks if the command is in the add_command array
-            // Code to add an employee
+        getline(cin, command);
+        transform(command.begin(), command.end(), command.begin(), ::toupper);
+
+        if (find(add_command, add_command + sizeof(add_command)/sizeof(add_command[0]), command) != add_command + sizeof(add_command)/sizeof(add_command[0])) {
             cout << "Adding an employee..." << endl;
             string first_name, last_name, position, email, contact, gender;
             int age;
@@ -81,18 +84,15 @@ int main() {
             cin >> age;
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
-
-            const char* sql =
+            const char* sql_insert =
                 "INSERT INTO employees "
                 "(first_name, last_name, employee_position, email, contact_number, gender, age) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?);";
 
             sqlite3_stmt* stmt;
-
-            if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            if (sqlite3_prepare_v2(db, sql_insert, -1, &stmt, nullptr) != SQLITE_OK) {
                 cerr << "Prepare failed: " << sqlite3_errmsg(db) << endl;
             } else {
-                // Bind values
                 sqlite3_bind_text(stmt, 1, first_name.c_str(), -1, SQLITE_TRANSIENT);
                 sqlite3_bind_text(stmt, 2, last_name.c_str(), -1, SQLITE_TRANSIENT);
                 sqlite3_bind_text(stmt, 3, position.c_str(), -1, SQLITE_TRANSIENT);
@@ -105,29 +105,74 @@ int main() {
                     cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;
                 } else {
                     cout << "Employee added successfully." << endl;
-                    cout << "ID: "
-                        << setw(3) << setfill('0')
-                        << sqlite3_last_insert_rowid(db)
-                        << endl;
+                    cout << "ID: " << sqlite3_last_insert_rowid(db) << endl;
                 }
-
                 sqlite3_finalize(stmt);
             }
 
-        } else if (find(remove_command, remove_command + sizeof(remove_command)/sizeof(remove_command[0]), command) != remove_command + sizeof(remove_command)/sizeof(remove_command[0])) { //checks if the command is in the remove_command array
-            // Code to remove an employee
+        } else if (find(remove_command, remove_command + sizeof(remove_command)/sizeof(remove_command[0]), command) != remove_command + sizeof(remove_command)/sizeof(remove_command[0])) {
             cout << "Removing an employee..." << endl;
-        } else if (find(list_command, list_command + sizeof(list_command)/sizeof(list_command[0]), command) != list_command + sizeof(list_command)/sizeof(list_command[0])) { //checks if the command is in the list_command array
-            // Code to list all employees
+            int id;
+            cout << "Enter Employee ID to remove: ";
+            cin >> id;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Are you sure you want to remove employee with ID " << id << "? (yes/no): ";
+            string confirmation;
+            getline(cin, confirmation);
+            
+            transform(confirmation.begin(), confirmation.end(), confirmation.begin(), ::toupper);
+            if (confirmation == "YES") {
+                const char* sql_delete = "DELETE FROM employees WHERE id = ?;";
+                sqlite3_stmt* stmt;
+                if (sqlite3_prepare_v2(db, sql_delete, -1, &stmt, nullptr) != SQLITE_OK) {
+                    cerr << "Prepare failed: " << sqlite3_errmsg(db) << endl;
+                } else {
+                    sqlite3_bind_int(stmt, 1, id);
+                    if (sqlite3_step(stmt) != SQLITE_DONE) {
+                        cerr << "Delete failed: " << sqlite3_errmsg(db) << endl;
+                    } else {
+                        cout << "Employee removed successfully." << endl;
+                    }
+                    sqlite3_finalize(stmt);
+                }
+            } else {
+                cout << "Removal cancelled." << endl;
+            }
+
+        } else if (find(list_command, list_command + sizeof(list_command)/sizeof(list_command[0]), command) != list_command + sizeof(list_command)/sizeof(list_command[0])) {
             cout << "Listing all employees..." << endl;
-        } else if (find(help_command, help_command + sizeof(help_command)/sizeof(help_command[0]), command) != help_command + sizeof(help_command)/sizeof(help_command[0])) { //checks if the command is in the help_command array
+            // Display employees in a formatted table
+            const char* sql_list = "SELECT id, first_name, last_name, employee_position, email, contact_number, gender, age FROM employees;";
+            sqlite3_stmt* stmt;
+            if (sqlite3_prepare_v2(db, sql_list, -1, &stmt, nullptr) != SQLITE_OK) {
+                cerr << "Prepare failed: " << sqlite3_errmsg(db) << endl;
+            } else {
+                cout << left << setw(5) << "ID" << setw(15) << "First Name" << setw(15) << "Last Name" << setw(20) << "Position" << setw(35) << "Email" << setw(15) << "Contact" << setw(10) << "Gender" << setw(5) << "Age" << endl;
+                cout << string(120, '-') << endl;
+                while (sqlite3_step(stmt) == SQLITE_ROW) {
+                    cout << left
+                        << setw(5) << sqlite3_column_int(stmt, 0)
+                        << setw(15) << reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1))
+                        << setw(15) << reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2))
+                        << setw(20) << reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3))
+                        << setw(35) << reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4))
+                        << setw(15) << reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5))
+                        << setw(10) << reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6))
+                        << setw(5) << sqlite3_column_int(stmt, 7)
+                        << endl;
+                }
+                sqlite3_finalize(stmt);
+            }
+
+        } else if (find(help_command, help_command + sizeof(help_command)/sizeof(help_command[0]), command) != help_command + sizeof(help_command)/sizeof(help_command[0])) {
             cout << "Available commands:" << endl;
             cout << "Add Employee: Add Employee" << endl;
             cout << "Remove Employee: Remove Employee" << endl;
             cout << "List Employees: List Employees" << endl;
             cout << "Show Help: Help" << endl;
             cout << "Exit System: Exit" << endl;
-        } else if (find(exit_command, exit_command + sizeof(exit_command)/sizeof(exit_command[0]), command) != exit_command + sizeof(exit_command)/sizeof(exit_command[0])) { //checks if the command is in exit_command array
+
+        } else if (find(exit_command, exit_command + sizeof(exit_command)/sizeof(exit_command[0]), command) != exit_command + sizeof(exit_command)/sizeof(exit_command[0])) {
             cout << "Exiting the system. Goodbye!" << endl;
             break;
 

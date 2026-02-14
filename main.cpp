@@ -8,8 +8,17 @@
 
 using namespace std;
 
+//Defining Functions
+
+// Function to clear the console screen
+void clearscreen() {
+    system("cls");
+    cout << "Welcome To Employee Management System!" << endl;
+}
+
+
 int main() {
-    system("cls"); // Clear the console screen (Windows specific)
+
 
     sqlite3* db;
     int exit = sqlite3_open("employees.db", &db);
@@ -38,10 +47,8 @@ int main() {
         sqlite3_free(errMsg);
     }
     
+    clearscreen();
     
-
-
-    cout << "Welcome To Employee Management System!" << endl;
     string command;
 
     // Commands: add, remove, list, exit
@@ -104,6 +111,7 @@ int main() {
                 if (sqlite3_step(stmt) != SQLITE_DONE) {
                     cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;
                 } else {
+                    clearscreen();
                     cout << "Employee added successfully." << endl;
                     cout << "ID: " << sqlite3_last_insert_rowid(db) << endl;
                 }
@@ -131,6 +139,7 @@ int main() {
                     if (sqlite3_step(stmt) != SQLITE_DONE) {
                         cerr << "Delete failed: " << sqlite3_errmsg(db) << endl;
                     } else {
+                        clearscreen();
                         cout << "Employee removed successfully." << endl;
                     }
                     sqlite3_finalize(stmt);
@@ -140,6 +149,7 @@ int main() {
             }
 
         } else if (find(list_command, list_command + sizeof(list_command)/sizeof(list_command[0]), command) != list_command + sizeof(list_command)/sizeof(list_command[0])) {
+            clearscreen();
             cout << "Listing all employees..." << endl;
             // Display employees in a formatted table
             const char* sql_list = "SELECT id, first_name, last_name, employee_position, email, contact_number, gender, age FROM employees;";
@@ -165,6 +175,7 @@ int main() {
             }
 
         } else if (find(help_command, help_command + sizeof(help_command)/sizeof(help_command[0]), command) != help_command + sizeof(help_command)/sizeof(help_command[0])) {
+            clearscreen();
             cout << "Available commands:" << endl;
             cout << "Add Employee: Add Employee" << endl;
             cout << "Remove Employee: Remove Employee" << endl;
